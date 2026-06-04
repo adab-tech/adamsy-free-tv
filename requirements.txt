@@ -1,0 +1,4 @@
+fastapi>=0.118.0
+pyinstaller>=6.6.0
+python-vlc>=3.0.21203
+uvicorn>=0.35.0

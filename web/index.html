@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Adamsy Free TV Web</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero reveal">
+        <div class="brand-lockup">
+          <img
+            class="brand-icon"
+            src="/brand/adamsy-free-tv-icon-1024.png"
+            alt="Adamsy Free TV logo"
+          />
+          <div>
+            <p class="eyebrow">AdabTech Web Preview</p>
+            <h1>Adamsy Free TV</h1>
+            <p class="hero-copy">
+              A browser-first channel browser for the migration from desktop to
+              universal access.
+            </p>
+          </div>
+        </div>
+        <div class="hero-actions">
+          <a class="ghost-button" href="/docs" target="_blank" rel="noreferrer">API Docs</a>
+          <button class="ghost-button" id="reload-button" type="button">Reload View</button>
+          <button class="accent-button" id="sync-button" type="button">Sync Catalog</button>
+        </div>
+      </header>
+
+      <main class="layout">
+        <section class="player-panel reveal">
+          <div class="player-topline">
+            <span class="status-pill" id="api-status">Checking API</span>
+            <span class="status-meta" id="source-meta">Loading source...</span>
+          </div>
+
+          <div class="player-frame">
+            <video id="channel-player" controls playsinline preload="none"></video>
+            <div class="player-placeholder" id="player-placeholder">
+              <div class="placeholder-mark">TV</div>
+              <p>Select a channel to try browser playback.</p>
+            </div>
+          </div>
+
+          <p class="player-mode" id="player-mode">Waiting for a channel selection.</p>
+
+          <div class="now-playing">
+            <div>
+              <p class="eyebrow">Now Playing</p>
+              <h2 id="current-channel-name">No channel selected</h2>
+              <p id="current-channel-meta">Choose a channel from the library.</p>
+            </div>
+            <div class="player-links">
+              <button id="favorite-button" class="ghost-button" type="button">Save Favorite</button>
+              <a id="open-stream-link" class="accent-button disabled-link" href="#" target="_blank" rel="noreferrer">Open Stream</a>
+              <button id="copy-stream-button" class="ghost-button" type="button">Copy URL</button>
+            </div>
+          </div>
+
+          <p class="support-note">
+            Browser playback still depends on codec and stream support. If a
+            channel fails here, the desktop build may still handle it.
+          </p>
+        </section>
+
+        <section class="library-panel reveal">
+          <div class="stats-grid">
+            <article class="stat-card">
+              <span class="stat-label">Visible channels</span>
+              <strong id="visible-count">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Total channels</span>
+              <strong id="total-count">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Categories</span>
+              <strong id="category-count">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Countries</span>
+              <strong id="country-count">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Favorites</span>
+              <strong id="favorite-count">0</strong>
+            </article>
+            <article class="stat-card">
+              <span class="stat-label">Recent plays</span>
+              <strong id="recent-count">0</strong>
+            </article>
+          </div>
+
+          <section class="saved-panel">
+            <div class="saved-block">
+              <div class="saved-header">
+                <div>
+                  <p class="eyebrow">Saved Picks</p>
+                  <h3>Favorites</h3>
+                </div>
+                <button class="ghost-button mini-button" id="favorites-only-button" type="button">View Only</button>
+              </div>
+              <div class="saved-strip" id="favorites-strip"></div>
+            </div>
+
+            <div class="saved-block">
+              <div class="saved-header">
+                <div>
+                  <p class="eyebrow">Continue Watching</p>
+                  <h3>Recent Channels</h3>
+                </div>
+                <button class="ghost-button mini-button" id="recent-only-button" type="button">View Only</button>
+              </div>
+              <div class="saved-strip" id="recent-strip"></div>
+            </div>
+          </section>
+
+          <div class="filter-bar">
+            <label class="filter-field filter-search">
+              <span>Search</span>
+              <input id="search-input" type="search" placeholder="Search channels, country, category, or stream URL" />
+            </label>
+
+            <label class="filter-field">
+              <span>Category</span>
+              <select id="category-select">
+                <option value="All">All</option>
+              </select>
+            </label>
+
+            <label class="filter-field">
+              <span>Country</span>
+              <select id="country-select">
+                <option value="All">All</option>
+              </select>
+            </label>
+
+            <label class="filter-field">
+              <span>View</span>
+              <select id="view-select">
+                <option value="all">All channels</option>
+                <option value="favorites">Favorites</option>
+                <option value="recent">Recent</option>
+              </select>
+            </label>
+
+            <button id="reset-filters" class="ghost-button reset-button" type="button">Reset</button>
+          </div>
+
+          <section class="admin-panel">
+            <div class="admin-copy">
+              <p class="eyebrow">Admin Refresh</p>
+              <h3>Update the shared channel catalog</h3>
+              <p class="admin-status" id="refresh-status-text">Ready to sync the latest channels.</p>
+            </div>
+            <label class="filter-field token-field">
+              <span>Admin token</span>
+              <input id="admin-token-input" type="password" placeholder="Optional unless deployment requires one" />
+            </label>
+            <label class="inline-check">
+              <input id="verify-live-checkbox" type="checkbox" />
+              <span>Verify live streams before saving</span>
+            </label>
+          </section>
+
+          <div class="results-header">
+            <div>
+              <p class="eyebrow">Channel Library</p>
+              <h2>Browse the current catalog</h2>
+            </div>
+            <p class="results-caption" id="results-caption">Loading channels...</p>
+          </div>
+
+          <div class="channel-grid" id="channel-grid"></div>
+          <div class="empty-state hidden" id="empty-state">
+            <h3>No channels matched these filters.</h3>
+            <p>Try a broader search or reset the category and country filters.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

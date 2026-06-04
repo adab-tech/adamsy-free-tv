@@ -1,0 +1,7 @@
+.venv/
+build/
+dist/
+release/
+__pycache__/
+app/__pycache__/
+tv_start.log
