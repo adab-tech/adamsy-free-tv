@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for adamsy-free-tv on 2026-07-06T20:09:41Z
+# fly.toml app configuration file generated for adamsy-free-tv-t-ejna on 2026-07-07T09:24:42Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'adamsy-free-tv'
+app = 'adamsy-free-tv-t-ejna'
 primary_region = 'ams'
 
 [build]
