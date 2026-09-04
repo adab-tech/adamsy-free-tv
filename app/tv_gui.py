@@ -451,8 +451,8 @@ class TVPlayer:
     def _update_channel_list(self) -> None:
         if not messagebox.askyesno(
             "Update Channel List",
-            "This will download 700+ free-to-air channels from iptv-org\n"
-            "and replace the current channel list.\n\nRequires internet. Continue?",
+            "This will download every free-to-air channel from the public\n"
+            "iptv-org catalog and replace the current channel list.\n\nRequires internet. Continue?",
             parent=self.root,
         ):
             return
@@ -482,7 +482,7 @@ class TVPlayer:
                 tv_updater.main(
                     [
                         "--limit",
-                        "700",
+                        "0",
                         "--verify-live",
                         "--verify-count",
                         "2000",

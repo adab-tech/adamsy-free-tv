@@ -6,6 +6,7 @@ import json
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Callable
@@ -16,8 +17,16 @@ M3U_SOURCES: list[tuple[str, str]] = [
     ("All", "https://iptv-org.github.io/iptv/index.m3u"),
 ]
 
+_ALLOWED_SCHEMES = {"http", "https"}
+
+
+def _is_allowed_url(url: str) -> bool:
+    return urllib.parse.urlsplit(url).scheme in _ALLOWED_SCHEMES
+
 OUTPUT_FILE = default_channels_file()
-DEFAULT_LIMIT = 700
+# A limit of 0 (or less) means "no cap" - keep every unique channel the
+# public source returns instead of truncating the catalog.
+DEFAULT_LIMIT = 0
 DEFAULT_VERIFY_TIMEOUT = 4
 DEFAULT_VERIFY_WORKERS = 24
 
@@ -33,19 +42,27 @@ def _emit(progress: Callable[[str], None] | None, message: str) -> None:
 
 
 def _fetch(url: str, timeout: int = 30) -> str:
+    if not _is_allowed_url(url):
+        raise ValueError(f"Refusing to fetch a non-http(s) URL: {url!r}")
     req = urllib.request.Request(url, headers={"User-Agent": "VirtualTV-Updater/1.0"})
-    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 - scheme checked above
         return resp.read().decode("utf-8", errors="replace")
 
 
 def _probe_stream(url: str, timeout: int) -> bool:
+    # Playlist entries come from a public, third-party source - never follow
+    # anything but http(s) so a crafted entry can't make us read local files
+    # or reach non-HTTP internal services (e.g. file://, gopher://).
+    if not _is_allowed_url(url):
+        return False
+
     headers = {
         "User-Agent": "VirtualTV-Updater/1.0",
         "Range": "bytes=0-2047",
     }
     req = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:  # nosec B310 - scheme checked above
             status = getattr(resp, "status", 200)
             if status >= 400:
                 return False
@@ -128,6 +145,9 @@ def _select_verified_channels(
     if not candidates:
         return []
 
+    # limit <= 0 means "keep every reachable candidate" (no cap).
+    effective_limit = limit if limit > 0 else len(candidates)
+
     selected: list[dict[str, str]] = []
     tested = 0
     reachable = 0
@@ -139,7 +159,7 @@ def _select_verified_channels(
 
     batch_size = max(workers * 8, 200)
     start = 0
-    while start < len(candidates) and len(selected) < limit:
+    while start < len(candidates) and len(selected) < effective_limit:
         batch = candidates[start : start + batch_size]
         with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as pool:
             future_map = {
@@ -162,14 +182,14 @@ def _select_verified_channels(
                 if tested % 100 == 0:
                     _emit(progress, f"Checked {tested:,}/{len(candidates):,} streams | reachable: {reachable:,}")
 
-                if len(selected) >= limit:
+                if len(selected) >= effective_limit:
                     break
 
         start += batch_size
 
     _emit(progress, f"Checked {tested:,}/{len(candidates):,} streams | reachable: {reachable:,}")
-    if len(selected) > limit:
-        selected = selected[:limit]
+    if len(selected) > effective_limit:
+        selected = selected[:effective_limit]
 
     _emit(progress, f"Verification complete: {len(selected):,} reachable channels selected.")
     return selected
@@ -225,17 +245,20 @@ def refresh_channels(
 
     _emit(progress, f"{len(filtered):,} channels matched the current refresh filters.")
 
+    # limit <= 0 means "no cap" - keep every channel the public source has.
+    effective_limit = limit if limit > 0 else len(filtered)
+
     if verify_live:
         selected = _select_verified_channels(
             channels=filtered,
-            limit=limit,
-            max_checks=max(limit, verify_count),
+            limit=effective_limit,
+            max_checks=max(effective_limit, verify_count),
             timeout=max(1, verify_timeout),
             workers=max(1, verify_workers),
             progress=progress,
         )
     else:
-        selected = filtered[:limit]
+        selected = filtered[:effective_limit]
 
     if not selected:
         raise RuntimeError("No channels were selected for output.")
@@ -245,7 +268,7 @@ def refresh_channels(
 
     return {
         "output_path": str(out_path),
-        "requested_limit": limit,
+        "requested_limit": limit if limit > 0 else "unlimited",
         "selected": len(selected),
         "unique_channels": len(unique),
         "filtered_channels": len(filtered),
@@ -257,7 +280,12 @@ def refresh_channels(
 
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description="Update tv_channels.json from iptv-org public playlists.")
-    parser.add_argument("--limit", type=int, default=DEFAULT_LIMIT, help="Max channels to save (default 700).")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=DEFAULT_LIMIT,
+        help="Max channels to save. 0 or negative means no cap - keep every channel from the public source (default).",
+    )
     parser.add_argument("--category", type=str, default=None, help="Filter by category, for example News.")
     parser.add_argument("--country", type=str, default=None, help="Filter by 2-letter country code, for example NG.")
     parser.add_argument("--list-countries", action="store_true", help="List all country codes in the feed and exit.")
