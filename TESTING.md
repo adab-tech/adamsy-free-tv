@@ -57,7 +57,7 @@ Steps
 
 - If not, run the backend (FastAPI) and any front-end dev server per README. Example for FastAPI (adjust if different):
 
-  uvicorn backend.main:app --host 127.0.0.1 --port 8001
+  uvicorn backend.api:app --host 127.0.0.1 --port 8001
 
 5. Open the UI
 - In a browser go to http://localhost:8001 (or the address printed by the start script).

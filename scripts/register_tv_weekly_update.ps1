@@ -47,7 +47,7 @@ function Resolve-UpdateCommand {
   if (Test-Path $packagedExe) {
     return @{
       Execute = $packagedExe
-      Argument = "--refresh-channels --limit 700 --verify-live --verify-count 2400 --verify-timeout 2 --verify-workers 32"
+      Argument = "--refresh-channels --limit 0 --verify-live --verify-count 2400 --verify-timeout 2 --verify-workers 32"
       WorkingDirectory = Split-Path -Parent $packagedExe
     }
   }
@@ -64,7 +64,7 @@ function Resolve-UpdateCommand {
 
   return @{
     Execute = $pythonExe
-    Argument = "`"$updater`" --limit 700 --verify-live --verify-count 2400 --verify-timeout 2 --verify-workers 32"
+    Argument = "`"$updater`" --limit 0 --verify-live --verify-count 2400 --verify-timeout 2 --verify-workers 32"
     WorkingDirectory = $RootPath
   }
 }

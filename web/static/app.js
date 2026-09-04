@@ -478,13 +478,32 @@ function toggleFavorite(channel = state.selectedChannel) {
   renderFromState();
 }
 
+const CHANNELS_PAGE_SIZE = 2000;
+
+async function fetchAllChannels() {
+  const items = [];
+  let offset = 0;
+
+  while (true) {
+    const page = await fetchJson(`/channels?limit=${CHANNELS_PAGE_SIZE}&offset=${offset}`);
+    const pageItems = page.items || [];
+    items.push(...pageItems);
+    offset += pageItems.length;
+    if (pageItems.length === 0 || offset >= (page.total ?? offset)) {
+      break;
+    }
+  }
+
+  return items;
+}
+
 async function refreshData({ keepSelection = true } = {}) {
   setApiStatus("Connecting...", true);
 
   try {
     const [health, channels, categories, countries, source, refreshState] = await Promise.all([
       fetchJson("/health"),
-      fetchJson("/channels?limit=1000"),
+      fetchAllChannels(),
       fetchJson("/channels/categories"),
       fetchJson("/channels/countries"),
       fetchJson("/channels/source"),
@@ -492,7 +511,7 @@ async function refreshData({ keepSelection = true } = {}) {
     ]);
 
     const previousSelection = keepSelection ? state.selectedChannel?.url : null;
-    state.items = channels.items || [];
+    state.items = channels || [];
     state.categories = categories.items || [];
     state.countries = countries.items || [];
     state.refreshState = refreshState;
@@ -529,7 +548,7 @@ async function startCatalogSync() {
   elements.refreshStatusText.textContent = "Refreshing the shared catalog. This can take a little while.";
 
   const params = new URLSearchParams({
-    limit: "700",
+    limit: "0",
   });
   if (elements.verifyLiveCheckbox.checked) {
     params.set("verify_live", "true");

@@ -5,3 +5,8 @@ release/
 __pycache__/
 app/__pycache__/
 tv_start.log
+
+# Build artifacts - never commit compiled binaries/installers to source
+# control. Distribute them via GitHub Releases instead (see TESTING.md).
+*.exe
+*.msi

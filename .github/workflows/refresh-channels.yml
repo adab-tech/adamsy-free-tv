@@ -1,0 +1,58 @@
+name: Refresh channel catalog
+
+on:
+  workflow_dispatch:
+    inputs:
+      verify_live:
+        description: "Probe each stream and keep only reachable ones (slower)."
+        type: boolean
+        default: false
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: Pull the full public catalog and open a PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Refresh tv_channels.json
+        run: |
+          ARGS="--limit 0 --output tv_channels.json"
+          if [ "${{ inputs.verify_live }}" = "true" ]; then
+            ARGS="$ARGS --verify-live"
+          fi
+          python tv_updater.py $ARGS
+
+      - name: Open a pull request if the catalog changed
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore: refresh channel catalog from iptv-org"
+          title: "chore: refresh channel catalog from iptv-org"
+          body: |
+            Automated refresh of `tv_channels.json` from the public
+            [iptv-org/iptv](https://github.com/iptv-org/iptv) playlist.
+
+            Review the diff before merging - public IPTV streams change
+            often, and some entries may be geo-restricted or offline.
+          branch: automated/refresh-channels
+          delete-branch: true
+          add-paths: tv_channels.json

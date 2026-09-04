@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hmac
 import os
 import threading
 from datetime import UTC, datetime
@@ -93,7 +94,8 @@ def create_app(channels_file: Path | None = None) -> FastAPI:
 
     def _require_admin(x_admin_token: str | None) -> None:
         configured = app.state.admin_token
-        if configured and x_admin_token != configured:
+        provided = x_admin_token or ""
+        if configured and not hmac.compare_digest(provided, configured):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="A valid admin token is required to refresh channels.",
@@ -118,7 +120,7 @@ def create_app(channels_file: Path | None = None) -> FastAPI:
         search: str = "",
         category: str = "All",
         country: str = "All",
-        limit: int = Query(default=100, ge=1, le=1000),
+        limit: int = Query(default=100, ge=1, le=5000),
         offset: int = Query(default=0, ge=0),
     ) -> dict[str, object]:
         channels = load_channels(app.state.channels_file)
@@ -169,7 +171,12 @@ def create_app(channels_file: Path | None = None) -> FastAPI:
 
     @app.post("/admin/refresh", status_code=status.HTTP_202_ACCEPTED)
     def refresh_catalog(
-        limit: int = Query(default=DEFAULT_LIMIT, ge=1, le=2000),
+        limit: int = Query(
+            default=DEFAULT_LIMIT,
+            ge=0,
+            le=50000,
+            description="Max channels to keep. 0 means no cap - keep every channel from the public source.",
+        ),
         category: str | None = None,
         country: str | None = None,
         verify_live: bool = False,

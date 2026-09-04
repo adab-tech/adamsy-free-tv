@@ -1,5 +1,9 @@
+from unittest import mock
+
+import pytest
 from fastapi.testclient import TestClient
 
+from backend import updater
 from backend.api import create_app
 
 
@@ -21,3 +25,53 @@ def test_channels_list():
     data = response.json()
     assert "items" in data
     assert len(data["items"]) > 0
+
+
+def test_admin_refresh_requires_token_when_configured(monkeypatch):
+    monkeypatch.setenv("ADAMSY_ADMIN_TOKEN", "super-secret-token")
+    app = create_app()
+    client = TestClient(app)
+
+    response = client.post("/admin/refresh")
+    assert response.status_code == 401
+
+    response = client.post("/admin/refresh", headers={"x-admin-token": "wrong-token"})
+    assert response.status_code == 401
+
+
+def test_admin_refresh_open_when_no_token_configured(monkeypatch, tmp_path):
+    monkeypatch.delenv("ADAMSY_ADMIN_TOKEN", raising=False)
+    app = create_app(channels_file=tmp_path / "tv_channels.json")
+    client = TestClient(app)
+
+    fake_m3u = (
+        '#EXTM3U\n#EXTINF:-1 tvg-country="NG" group-title="News",Sample\n'
+        "https://example.com/sample.m3u8\n"
+    )
+    with mock.patch("backend.updater._fetch", return_value=fake_m3u):
+        response = client.post("/admin/refresh")
+    assert response.status_code == 202
+
+
+@pytest.mark.parametrize("limit", [0, -1])
+def test_refresh_channels_unlimited_keeps_every_channel(tmp_path, limit):
+    fake_m3u = "#EXTM3U\n"
+    for i in range(1200):
+        fake_m3u += f'#EXTINF:-1 tvg-country="NG" group-title="News",Channel {i}\n'
+        fake_m3u += f"https://example.com/{i}.m3u8\n"
+
+    output_path = tmp_path / "tv_channels.json"
+    with mock.patch.object(updater, "_fetch", return_value=fake_m3u):
+        result = updater.refresh_channels(limit=limit, output_path=output_path)
+
+    assert result["selected"] == 1200
+    assert result["requested_limit"] == "unlimited"
+
+
+def test_refresh_channels_rejects_non_http_sources(tmp_path):
+    with pytest.raises(ValueError):
+        updater._fetch("file:///etc/passwd")
+
+
+def test_probe_stream_rejects_non_http_urls():
+    assert updater._probe_stream("file:///etc/passwd", timeout=1) is False
