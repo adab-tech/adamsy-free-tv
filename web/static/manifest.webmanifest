@@ -1,0 +1,37 @@
+{
+  "name": "Adamsy Free TV",
+  "short_name": "Adamsy TV",
+  "description": "Browse and stream free-to-air live TV channels in your browser.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#06111d",
+  "theme_color": "#06111d",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "/brand/adamsy-free-tv-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/adamsy-free-tv-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/adamsy-free-tv-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/brand/adamsy-free-tv-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
