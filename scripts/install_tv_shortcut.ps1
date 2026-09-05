@@ -14,8 +14,7 @@ $desktop = [Environment]::GetFolderPath("Desktop")
 $shortcutPath = Join-Path $desktop "Adamsy Free TV.lnk"
 $iconCandidates = @(
   (Join-Path $projectRoot "dist\VirtualTV.exe"),
-  (Join-Path $projectRoot "assets\branding\adamsy-free-tv.ico"),
-  "C:\Program Files\VideoLAN\VLC\vlc.exe"
+  (Join-Path $projectRoot "assets\branding\adamsy-free-tv.ico")
 )
 
 $iconLocation = $null
