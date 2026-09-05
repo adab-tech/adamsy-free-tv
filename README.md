@@ -1,6 +1,6 @@
 # Adamsy Free TV
 
-Windows desktop and browser experience for free-to-air live TV — channel catalog, VLC playback, favorites, and a shared FastAPI channel API.
+Windows desktop and browser experience for free-to-air live TV — channel catalog, HTML5 streaming, favorites, and a shared FastAPI channel API.
 
 [![Portfolio](https://img.shields.io/badge/Adamu_Abubakar-adamu.tech-0f766e?style=flat-square)](https://adamu.tech)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
@@ -15,9 +15,9 @@ Adamsy Free TV bundles a Windows IPTV client with a lightweight API for channel 
 ## Features
 
 - Live channel catalog and favorites
-- VLC-based playback on Windows
+- Native desktop window (pywebview) wrapping the same modern web UI - no VLC install needed
 - FastAPI backend for channel data
-- Optional web preview UI
+- Browser access to the same UI, installable as a PWA
 
 ## Quick start
 
@@ -32,8 +32,8 @@ cd adamsy-free-tv
 | Layer | Tools |
 |-------|--------|
 | API | Python, FastAPI |
-| Desktop | Python, VLC |
-| Web | Static preview (where enabled) |
+| Desktop | Python, pywebview (WebView2 on Windows) |
+| Web | HTML/CSS/JS, hls.js, installable PWA |
 
 ## License
 

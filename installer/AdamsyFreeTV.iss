@@ -2,7 +2,7 @@
   #define AppName "Adamsy Free TV"
 #endif
 #ifndef AppVersion
-  #define AppVersion "2.0.1"
+  #define AppVersion "2.1.0"
 #endif
 #ifndef AppPublisher
   #define AppPublisher "AdabTech"
@@ -59,23 +59,3 @@ Name: "{autodesktop}\{#AppName}"; Filename: "{app}\start_tv_app.bat"; WorkingDir
 
 [Run]
 Filename: "{app}\start_tv_app.bat"; Description: "Launch {#AppName}"; Flags: nowait postinstall skipifsilent
-
-[Code]
-function IsVlcInstalled: Boolean;
-begin
-  Result :=
-    FileExists(ExpandConstant('{pf}\VideoLAN\VLC\vlc.exe')) or
-    FileExists(ExpandConstant('{pf32}\VideoLAN\VLC\vlc.exe'));
-end;
-
-procedure CurStepChanged(CurStep: TSetupStep);
-begin
-  if (CurStep = ssPostInstall) and not IsVlcInstalled then
-  begin
-    MsgBox(
-      'VLC media player was not detected. Install VLC before launching Adamsy Free TV.',
-      mbInformation,
-      MB_OK
-    );
-  end;
-end;
