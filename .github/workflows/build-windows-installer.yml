@@ -1,0 +1,59 @@
+name: Build Windows installer
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing release tag to attach the installer to (only needed for manual runs)"
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build the desktop exe + installer and attach to the release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build the desktop executable (PyInstaller)
+        shell: pwsh
+        run: |
+          pyinstaller --noconfirm VirtualTV.spec
+          Copy-Item tv_channels.json dist\tv_channels.json -Force
+
+      - name: Install Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Build the Windows installer
+        shell: pwsh
+        run: .\scripts\build_windows_installer.ps1
+
+      - name: Upload installer to the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+        run: |
+          if (-not $env:RELEASE_TAG) {
+            throw "No release tag available (expected github.event.release.tag_name or the 'tag' input)."
+          }
+          $installer = Get-ChildItem "release\Adamsy-Free-TV-Setup-*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "No installer .exe found under release\."
+          }
+          gh release upload $env:RELEASE_TAG $installer.FullName --clobber
