@@ -105,6 +105,16 @@ def create_app(channels_file: Path | None = None) -> FastAPI:
     def web_index() -> FileResponse:
         return FileResponse(_web_dir() / "index.html")
 
+    @app.get("/service-worker.js", include_in_schema=False)
+    def service_worker() -> FileResponse:
+        # Served from the root (not /static/) so its default scope covers
+        # the whole app - a service worker's scope is limited to its own
+        # directory and below unless served from a broader path.
+        return FileResponse(
+            _static_dir() / "service-worker.js",
+            media_type="text/javascript",
+        )
+
     @app.get("/health")
     def health() -> dict[str, object]:
         return {

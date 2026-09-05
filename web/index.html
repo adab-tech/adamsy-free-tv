@@ -4,6 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Adamsy Free TV Web</title>
+    <meta name="description" content="Browse and stream free-to-air live TV channels in your browser." />
+    <meta name="theme-color" content="#06111d" />
+    <link rel="manifest" href="/static/manifest.webmanifest" />
+    <link rel="icon" href="/brand/adamsy-free-tv-icon-192.png" />
+    <link rel="apple-touch-icon" href="/brand/adamsy-free-tv-icon-192.png" />
     <link rel="stylesheet" href="/static/styles.css" />
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1" defer></script>
   </head>
@@ -27,7 +32,9 @@
         </div>
         <div class="hero-actions">
           <a class="ghost-button" href="/docs" target="_blank" rel="noreferrer">API Docs</a>
+          <button class="ghost-button" id="install-button" type="button" hidden>⬇ Install App</button>
           <button class="ghost-button" id="reload-button" type="button">Reload View</button>
+          <button class="ghost-button" id="settings-button" type="button" aria-expanded="false" aria-controls="admin-panel">⚙ Settings</button>
           <button class="accent-button" id="sync-button" type="button">Sync Catalog</button>
         </div>
       </header>
@@ -39,15 +46,24 @@
             <span class="status-meta" id="source-meta">Loading source...</span>
           </div>
 
-          <div class="player-frame">
+          <div class="player-frame" id="player-frame">
             <video id="channel-player" controls playsinline preload="none"></video>
             <div class="player-placeholder" id="player-placeholder">
               <div class="placeholder-mark">TV</div>
               <p>Select a channel to try browser playback.</p>
             </div>
+            <div class="player-loading hidden" id="player-loading">
+              <span class="spinner" aria-hidden="true"></span>
+              <span>Buffering…</span>
+            </div>
+            <div class="player-frame-controls">
+              <button class="icon-button" id="pip-button" type="button" title="Picture-in-picture" hidden>⧉</button>
+              <button class="icon-button" id="fullscreen-button" type="button" title="Fullscreen">⛶</button>
+            </div>
           </div>
 
           <p class="player-mode" id="player-mode">Waiting for a channel selection.</p>
+          <p class="key-hint">Shortcuts: space play/pause · ←/→ change channel · f fullscreen · m mute</p>
 
           <div class="now-playing">
             <div>
@@ -127,32 +143,27 @@
             </label>
 
             <label class="filter-field">
-              <span>Category</span>
-              <select id="category-select">
-                <option value="All">All</option>
-              </select>
-            </label>
-
-            <label class="filter-field">
               <span>Country</span>
               <select id="country-select">
                 <option value="All">All</option>
               </select>
             </label>
 
-            <label class="filter-field">
+            <div class="filter-field view-tabs-field">
               <span>View</span>
-              <select id="view-select">
-                <option value="all">All channels</option>
-                <option value="favorites">Favorites</option>
-                <option value="recent">Recent</option>
-              </select>
-            </label>
+              <div class="segmented" id="view-tabs" role="tablist" aria-label="Channel view">
+                <button type="button" class="segmented-button active" data-view="all" role="tab" aria-selected="true">All channels</button>
+                <button type="button" class="segmented-button" data-view="favorites" role="tab" aria-selected="false">Favorites</button>
+                <button type="button" class="segmented-button" data-view="recent" role="tab" aria-selected="false">Recent</button>
+              </div>
+            </div>
 
             <button id="reset-filters" class="ghost-button reset-button" type="button">Reset</button>
           </div>
 
-          <section class="admin-panel">
+          <div class="category-chip-row" id="category-chips" role="tablist" aria-label="Category"></div>
+
+          <section class="admin-panel collapsed" id="admin-panel">
             <div class="admin-copy">
               <p class="eyebrow">Admin Refresh</p>
               <h3>Update the shared channel catalog</h3>
@@ -181,6 +192,12 @@
             <h3>No channels matched these filters.</h3>
             <p>Try a broader search or reset the category and country filters.</p>
           </div>
+
+          <nav class="pagination" id="pagination" aria-label="Channel pages">
+            <button class="ghost-button" id="pagination-prev" type="button">← Prev</button>
+            <span class="pagination-indicator" id="pagination-indicator">Page 1 of 1</span>
+            <button class="ghost-button" id="pagination-next" type="button">Next →</button>
+          </nav>
         </section>
       </main>
     </div>
