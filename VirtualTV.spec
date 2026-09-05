@@ -7,7 +7,8 @@ a = Analysis(
     binaries=[],
     datas=[
         ('tv_channels.json', '.'),
-        ('assets\\branding\\adamsy-free-tv.ico', 'assets\\branding'),
+        ('web', 'web'),
+        ('assets\\branding', 'assets\\branding'),
     ],
     hiddenimports=['tv_updater'],
     hookspath=[],

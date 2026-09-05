@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.channels import (
+    bundled_root,
     categories_for_channels,
     channel_to_dict,
     countries_for_channels,
@@ -21,11 +22,15 @@ from backend.channels import (
 )
 from backend.updater import DEFAULT_LIMIT, refresh_channels
 
-API_VERSION = "2.1.0"
+API_VERSION = "2.1.1"
 
 
 def _web_dir() -> Path:
-    return Path(__file__).resolve().parent.parent / "web"
+    # Uses bundled_root() (sys._MEIPASS when frozen) rather than a
+    # __file__-relative path, since PyInstaller's handling of __file__ for
+    # bytecode-archived modules isn't something to lean on directly - this
+    # matches the pattern backend.channels already uses for the same reason.
+    return bundled_root() / "web"
 
 
 def _static_dir() -> Path:
@@ -33,7 +38,7 @@ def _static_dir() -> Path:
 
 
 def _branding_dir() -> Path:
-    return Path(__file__).resolve().parent.parent / "assets" / "branding"
+    return bundled_root() / "assets" / "branding"
 
 
 def _utc_timestamp() -> str:
