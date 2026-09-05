@@ -1,5 +1,5 @@
 $AppName = "Adamsy Free TV"
-$AppVersion = "2.1.0"
+$AppVersion = "2.1.1"
 $AppPublisher = "AdabTech"
 $InstallFolderName = "Adamsy Free TV"
 $ExecutableName = "VirtualTV.exe"

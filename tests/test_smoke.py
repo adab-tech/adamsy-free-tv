@@ -27,6 +27,26 @@ def test_channels_list():
     assert len(data["items"]) > 0
 
 
+def test_web_app_assets_are_served():
+    # Regression test: VirtualTV.spec's PyInstaller `datas` list once only
+    # bundled tv_channels.json and a single icon, so the frozen desktop app
+    # (which now serves this same web UI via pywebview) had no web/index.html
+    # or assets/branding/*.png to find - FileResponse raised, and pywebview
+    # showed an "internal server error" on first load. This exercises every
+    # route that reads from _web_dir()/_static_dir()/_branding_dir().
+    app = create_app()
+    client = TestClient(app)
+
+    index = client.get("/")
+    assert index.status_code == 200
+    assert "<title>" in index.text
+
+    assert client.get("/static/app.js").status_code == 200
+    assert client.get("/static/manifest.webmanifest").status_code == 200
+    assert client.get("/service-worker.js").status_code == 200
+    assert client.get("/brand/adamsy-free-tv-icon-192.png").status_code == 200
+
+
 def test_admin_refresh_requires_token_when_configured(monkeypatch):
     monkeypatch.setenv("ADAMSY_ADMIN_TOKEN", "super-secret-token")
     app = create_app()
