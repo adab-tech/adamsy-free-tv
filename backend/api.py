@@ -21,7 +21,7 @@ from backend.channels import (
 )
 from backend.updater import DEFAULT_LIMIT, refresh_channels
 
-API_VERSION = "2.0.0"
+API_VERSION = "2.0.1"
 
 
 def _web_dir() -> Path:

@@ -43,17 +43,55 @@ jobs:
         shell: pwsh
         run: .\scripts\build_windows_installer.ps1
 
+      - name: Locate the installer
+        id: installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "release\Adamsy-Free-TV-Setup-*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "No installer .exe found under release\."
+          }
+          "path=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+          "name=$($installer.Name)" >> $env:GITHUB_OUTPUT
+
+      # Signing is opt-in: until the SignPath project is set up (see
+      # SIGNING.md), SIGNPATH_PROJECT_SLUG is unset, these two steps are
+      # skipped, and the unsigned installer is uploaded as-is - same
+      # behavior as before signing was wired in.
+      - name: Upload unsigned installer artifact
+        if: ${{ vars.SIGNPATH_PROJECT_SLUG != '' }}
+        id: unsigned-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: unsigned-installer
+          path: ${{ steps.installer.outputs.path }}
+          retention-days: 1
+
+      - name: Sign the installer via SignPath
+        if: ${{ vars.SIGNPATH_PROJECT_SLUG != '' }}
+        uses: signpath/github-action-submit-signing-request@v1
+        with:
+          api-token: "${{ secrets.SIGNPATH_API_TOKEN }}"
+          organization-id: "${{ vars.SIGNPATH_ORGANIZATION_ID }}"
+          project-slug: "${{ vars.SIGNPATH_PROJECT_SLUG }}"
+          signing-policy-slug: "${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}"
+          artifact-configuration-slug: "${{ vars.SIGNPATH_ARTIFACT_CONFIGURATION_SLUG }}"
+          github-artifact-id: "${{ steps.unsigned-artifact.outputs.artifact-id }}"
+          wait-for-completion: true
+          output-artifact-directory: "signed"
+
       - name: Upload installer to the release
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+          INSTALLER_NAME: ${{ steps.installer.outputs.name }}
+          UNSIGNED_PATH: ${{ steps.installer.outputs.path }}
         run: |
           if (-not $env:RELEASE_TAG) {
             throw "No release tag available (expected github.event.release.tag_name or the 'tag' input)."
           }
-          $installer = Get-ChildItem "release\Adamsy-Free-TV-Setup-*.exe" | Select-Object -First 1
-          if (-not $installer) {
-            throw "No installer .exe found under release\."
-          }
-          gh release upload $env:RELEASE_TAG $installer.FullName --clobber
+          $signedPath = Join-Path "signed" $env:INSTALLER_NAME
+          $uploadPath = if (Test-Path $signedPath) { $signedPath } else { $env:UNSIGNED_PATH }
+          Write-Host "Uploading: $uploadPath"
+          gh release upload $env:RELEASE_TAG $uploadPath --clobber

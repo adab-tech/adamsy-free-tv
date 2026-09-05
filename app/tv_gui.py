@@ -60,7 +60,7 @@ def _bundled_channels_file() -> Path:
 
 def _preferred_icon_file() -> Path | None:
     candidates = [
-        _project_root() / "assets" / "branding" / "adamsy-free-tv.ico",
+        project_root() / "assets" / "branding" / "adamsy-free-tv.ico",
         _bundled_root() / "assets" / "branding" / "adamsy-free-tv.ico",
     ]
     for candidate in candidates:
@@ -70,12 +70,13 @@ def _preferred_icon_file() -> Path | None:
 
 
 def _apply_window_icon(root: tk.Tk) -> None:
-    icon_file = _preferred_icon_file()
-    if not icon_file:
-        return
     try:
+        icon_file = _preferred_icon_file()
+        if not icon_file:
+            return
         root.iconbitmap(default=str(icon_file))
     except Exception:
+        # A missing/unloadable icon should never block the app from opening.
         pass
 
 
