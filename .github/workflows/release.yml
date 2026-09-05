@@ -1,0 +1,55 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to create, e.g. v2.0.0"
+        required: true
+      name:
+        description: "Release title"
+        required: true
+      notes:
+        description: "Release notes (markdown)"
+        required: true
+      target:
+        description: "Commit SHA or branch to tag"
+        required: false
+        default: "main"
+      prerelease:
+        description: "Mark as a pre-release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Tag and publish a GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ inputs.target }}
+
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES: ${{ inputs.notes }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          RELEASE_NAME: ${{ inputs.name }}
+          RELEASE_TARGET: ${{ inputs.target }}
+          RELEASE_PRERELEASE: ${{ inputs.prerelease }}
+        run: |
+          printf '%s' "$RELEASE_NOTES" > release_notes.md
+          PRERELEASE_FLAG=""
+          if [ "$RELEASE_PRERELEASE" = "true" ]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+          gh release create "$RELEASE_TAG" \
+            --title "$RELEASE_NAME" \
+            --notes-file release_notes.md \
+            --target "$RELEASE_TARGET" \
+            $PRERELEASE_FLAG
