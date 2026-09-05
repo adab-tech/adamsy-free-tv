@@ -4,6 +4,7 @@ Windows desktop and browser experience for free-to-air live TV — channel catal
 
 [![Portfolio](https://img.shields.io/badge/Adamu_Abubakar-adamu.tech-0f766e?style=flat-square)](https://adamu.tech)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
 ---
 
@@ -33,6 +34,10 @@ cd adamsy-free-tv
 | API | Python, FastAPI |
 | Desktop | Python, VLC |
 | Web | Static preview (where enabled) |
+
+## License
+
+MIT - see [LICENSE](LICENSE). The Windows installer is code-signed for free via [SignPath.io](https://signpath.io)'s open source program; see [SIGNING.md](SIGNING.md) for setup status.
 
 ## Author
 
