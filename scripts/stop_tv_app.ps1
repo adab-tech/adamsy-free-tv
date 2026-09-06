@@ -2,15 +2,20 @@ $ErrorActionPreference = "Stop"
 
 $stopped = @()
 
-# Stop packaged app if present.
+# Stop packaged apps if present.
 Get-Process -Name "VirtualTV" -ErrorAction SilentlyContinue | ForEach-Object {
   Stop-Process -Id $_.Id -Force
   $stopped += "VirtualTV.exe (PID $($_.Id))"
 }
 
-# Stop python instances that launched tv_main.py.
+Get-Process -Name "VirtualTVClassic" -ErrorAction SilentlyContinue | ForEach-Object {
+  Stop-Process -Id $_.Id -Force
+  $stopped += "VirtualTVClassic.exe (PID $($_.Id))"
+}
+
+# Stop python instances that launched tv_main.py or tv_classic.py.
 Get-CimInstance Win32_Process -Filter "Name='python.exe' OR Name='pythonw.exe'" |
-  Where-Object { $_.CommandLine -like "*tv_main.py*" } |
+  Where-Object { $_.CommandLine -like "*tv_main.py*" -or $_.CommandLine -like "*tv_classic.py*" } |
   ForEach-Object {
     Stop-Process -Id $_.ProcessId -Force
     $stopped += "$($_.Name) (PID $($_.ProcessId))"

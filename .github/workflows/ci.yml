@@ -56,4 +56,4 @@ jobs:
         run: pip-audit -r requirements.txt
 
       - name: Static security lint (bandit)
-        run: bandit -r backend app tv_main.py tv_updater.py index.py -ll
+        run: bandit -r backend app tv_main.py tv_classic.py tv_updater.py index.py -ll
