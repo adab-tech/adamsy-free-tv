@@ -32,6 +32,7 @@ function Resolve-Iscc {
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $distDir = Join-Path $projectRoot "dist"
 $appExe = Join-Path $distDir $ExecutableName
+$classicAppExe = Join-Path $distDir $ClassicExecutableName
 $channelsFile = Join-Path $distDir $ChannelsFileName
 $brandingDir = Join-Path $projectRoot "assets\branding"
 
@@ -39,6 +40,9 @@ $brandingDir = Join-Path $projectRoot "assets\branding"
 
 if (-not (Test-Path $appExe)) {
   throw "Build the desktop app first. Missing: $appExe"
+}
+if (-not (Test-Path $classicAppExe)) {
+  throw "Build the classic desktop app first. Missing: $classicAppExe"
 }
 if (-not (Test-Path $channelsFile)) {
   throw "Missing channel list: $channelsFile"
@@ -55,8 +59,10 @@ New-Item -ItemType Directory -Path $releaseDir -Force | Out-Null
 
 $payloadFiles = @(
   @{ Source = $appExe; Target = $ExecutableName },
+  @{ Source = $classicAppExe; Target = $ClassicExecutableName },
   @{ Source = $channelsFile; Target = $ChannelsFileName },
   @{ Source = (Join-Path $projectRoot $LauncherName); Target = $LauncherName },
+  @{ Source = (Join-Path $projectRoot $ClassicLauncherName); Target = $ClassicLauncherName },
   @{ Source = (Join-Path $projectRoot $StopLauncherName); Target = $StopLauncherName },
   @{ Source = (Join-Path $projectRoot "scripts\$StopScriptName"); Target = $StopScriptName },
   @{ Source = (Join-Path $projectRoot $ReadmeName); Target = $ReadmeName },

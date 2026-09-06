@@ -16,6 +16,7 @@ Adamsy Free TV bundles a Windows IPTV client with a lightweight API for channel 
 
 - Live channel catalog and favorites
 - Native desktop window (pywebview) wrapping the same modern web UI - no VLC install needed
+- A separate Classic desktop app (Tkinter/VLC) for anyone who prefers the original VLC-based player
 - FastAPI backend for channel data
 - Browser access to the same UI, installable as a PWA
 
@@ -27,12 +28,24 @@ cd adamsy-free-tv
 # See repository docs for API + desktop setup
 ```
 
+## Desktop apps
+
+Adamsy Free TV ships as two independent desktop apps, installed side by side:
+
+| App | Start Menu shortcut | Launch command | Requires VLC |
+|-----|----------------------|-----------------|--------------|
+| Adamsy Free TV (default) | "Adamsy Free TV" | `python tv_main.py` | No |
+| Adamsy Free TV (Classic) | "Adamsy Free TV (Classic)" | `python tv_main.py --classic` | Yes |
+
+Both apps read the same `tv_channels.json` catalog and are fully functional on their own; installing or removing one does not affect the other.
+
 ## Tech stack
 
 | Layer | Tools |
 |-------|--------|
 | API | Python, FastAPI |
-| Desktop | Python, pywebview (WebView2 on Windows) |
+| Desktop (default) | Python, pywebview (WebView2 on Windows) |
+| Desktop (Classic) | Python, Tkinter, python-vlc |
 | Web | HTML/CSS/JS, hls.js, installable PWA |
 
 ## License

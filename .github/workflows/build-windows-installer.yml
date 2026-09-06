@@ -30,10 +30,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Build the desktop executable (PyInstaller)
+      - name: Build the desktop executables (PyInstaller)
         shell: pwsh
         run: |
           pyinstaller --noconfirm VirtualTV.spec
+          pyinstaller --noconfirm VirtualTVClassic.spec
           Copy-Item tv_channels.json dist\tv_channels.json -Force
 
       - name: Install Inno Setup

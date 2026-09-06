@@ -12,7 +12,6 @@ from pathlib import Path
 
 import tv_updater
 from backend.channels import default_channels_file
-from app.tv_gui import launch_tv_gui
 
 
 def _default_channels_file() -> Path:
@@ -31,6 +30,11 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Start the read-only backend API instead of opening the GUI.",
     )
+    parser.add_argument(
+        "--classic",
+        action="store_true",
+        help="Launch the classic Tkinter/VLC desktop app instead of the default pywebview app.",
+    )
     parser.add_argument("--host", default="127.0.0.1", help="API host when using --serve-api.")
     parser.add_argument("--port", type=int, default=8000, help="API port when using --serve-api.")
     args, passthrough = parser.parse_known_args(argv)
@@ -46,6 +50,14 @@ def main(argv: list[str] | None = None) -> None:
 
         run_api(host=args.host, port=args.port, channels_file=_default_channels_file())
         return
+
+    if args.classic:
+        from app.tv_gui_classic import launch_tv_gui as launch_classic_gui
+
+        launch_classic_gui()
+        return
+
+    from app.tv_gui import launch_tv_gui
 
     launch_tv_gui()
 
