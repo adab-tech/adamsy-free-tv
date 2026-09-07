@@ -1,3 +1,4 @@
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -5,6 +6,24 @@ from fastapi.testclient import TestClient
 
 from backend import updater
 from backend.api import create_app
+
+_FAKE_M3U = (
+    '#EXTM3U\n#EXTINF:-1 tvg-country="NG" group-title="News",Sample\n'
+    "https://example.com/sample.m3u8\n"
+)
+_DEPLOY_ENV = (
+    "ADAMSY_ADMIN_TOKEN",
+    "ADAMSY_REQUIRE_ADMIN_TOKEN",
+    "ADAMSY_CORS_ORIGINS",
+    "FLY_APP_NAME",
+    "FLY_MACHINE_ID",
+    "VERCEL",
+)
+
+
+def _clear_deploy_env(monkeypatch) -> None:
+    for name in _DEPLOY_ENV:
+        monkeypatch.delenv(name, raising=False)
 
 
 def test_health():
@@ -48,6 +67,7 @@ def test_web_app_assets_are_served():
 
 
 def test_admin_refresh_requires_token_when_configured(monkeypatch):
+    _clear_deploy_env(monkeypatch)
     monkeypatch.setenv("ADAMSY_ADMIN_TOKEN", "super-secret-token")
     app = create_app()
     client = TestClient(app)
@@ -58,19 +78,90 @@ def test_admin_refresh_requires_token_when_configured(monkeypatch):
     response = client.post("/admin/refresh", headers={"x-admin-token": "wrong-token"})
     assert response.status_code == 401
 
+    health = client.get("/health")
+    assert health.status_code == 200
+    assert health.json()["admin_token_required"] is True
+
 
 def test_admin_refresh_open_when_no_token_configured(monkeypatch, tmp_path):
-    monkeypatch.delenv("ADAMSY_ADMIN_TOKEN", raising=False)
+    _clear_deploy_env(monkeypatch)
     app = create_app(channels_file=tmp_path / "tv_channels.json")
     client = TestClient(app)
 
-    fake_m3u = (
-        '#EXTM3U\n#EXTINF:-1 tvg-country="NG" group-title="News",Sample\n'
-        "https://example.com/sample.m3u8\n"
-    )
-    with mock.patch("backend.updater._fetch", return_value=fake_m3u):
+    with mock.patch("backend.updater._fetch", return_value=_FAKE_M3U):
         response = client.post("/admin/refresh")
     assert response.status_code == 202
+    assert client.get("/health").json()["admin_token_required"] is False
+
+
+def test_admin_refresh_succeeds_with_matching_token(monkeypatch, tmp_path):
+    _clear_deploy_env(monkeypatch)
+    monkeypatch.setenv("ADAMSY_ADMIN_TOKEN", "super-secret-token")
+    app = create_app(channels_file=tmp_path / "tv_channels.json")
+    client = TestClient(app)
+
+    with mock.patch("backend.updater._fetch", return_value=_FAKE_M3U):
+        response = client.post(
+            "/admin/refresh",
+            headers={"x-admin-token": "super-secret-token"},
+        )
+    assert response.status_code == 202
+
+
+@pytest.mark.parametrize(
+    "env_name,env_value",
+    [
+        ("FLY_APP_NAME", "adamsy-free-tv"),
+        ("VERCEL", "1"),
+        ("ADAMSY_REQUIRE_ADMIN_TOKEN", "1"),
+    ],
+)
+def test_admin_refresh_refuses_open_access_when_deployed(monkeypatch, tmp_path, env_name, env_value):
+    _clear_deploy_env(monkeypatch)
+    monkeypatch.setenv(env_name, env_value)
+    app = create_app(channels_file=tmp_path / "tv_channels.json")
+    client = TestClient(app)
+
+    response = client.post("/admin/refresh")
+    assert response.status_code == 503
+    assert "ADAMSY_ADMIN_TOKEN" in response.json()["detail"]
+    assert client.get("/health").json()["admin_token_required"] is True
+    # Status polling used by the web UI stays public so page load does not fail.
+    assert client.get("/admin/refresh").status_code == 200
+
+
+def test_cors_default_allows_any_origin(monkeypatch):
+    _clear_deploy_env(monkeypatch)
+    app = create_app()
+    client = TestClient(app)
+    response = client.get("/health", headers={"Origin": "https://example.com"})
+    assert response.headers.get("access-control-allow-origin") == "*"
+
+
+def test_cors_origins_can_be_restricted(monkeypatch):
+    _clear_deploy_env(monkeypatch)
+    monkeypatch.setenv("ADAMSY_CORS_ORIGINS", "https://tv.example.com")
+    app = create_app()
+    client = TestClient(app)
+
+    allowed = client.get("/health", headers={"Origin": "https://tv.example.com"})
+    assert allowed.headers.get("access-control-allow-origin") == "https://tv.example.com"
+
+    denied = client.get("/health", headers={"Origin": "https://evil.example"})
+    assert denied.headers.get("access-control-allow-origin") != "https://evil.example"
+
+
+def test_docker_and_fly_listen_on_the_same_port():
+    dockerfile = Path("Dockerfile").read_text(encoding="utf-8")
+    fly = Path("fly.toml").read_text(encoding="utf-8")
+    assert "internal_port = 8080" in fly
+    assert 'PORT = \'8080\'' in fly or 'PORT = "8080"' in fly
+    assert "memory = '256mb'" in fly or 'memory = "256mb"' in fly
+    assert "memory_mb" not in fly
+    assert "--port\", \"8080\"" in dockerfile
+    assert "uvicorn" in dockerfile
+    assert "fastapi\", \"run\"" not in dockerfile
+    assert "ADAMSY_REQUIRE_ADMIN_TOKEN=1" in dockerfile
 
 
 @pytest.mark.parametrize("limit", [0, -1])

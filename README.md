@@ -25,7 +25,23 @@ Adamsy Free TV bundles a Windows IPTV client with a lightweight API for channel 
 ```bash
 git clone https://github.com/adab-tech/adamsy-free-tv.git
 cd adamsy-free-tv
-# See repository docs for API + desktop setup
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+python tv_main.py --serve-api --host 127.0.0.1 --port 8000
+```
+
+The API and web UI then listen on http://127.0.0.1:8000/. See [TESTING.md](TESTING.md) for desktop/installer testing.
+
+## Deploy (API)
+
+Docker and Fly both serve with **uvicorn** on **port 8080** (not the FastAPI CLI). Set `ADAMSY_ADMIN_TOKEN` on Fly and Vercel so `POST /admin/refresh` is not left open; details are in [SECURITY.md](SECURITY.md).
+
+```bash
+docker build -t adamsy-free-tv .
+docker run --rm -p 8080:8080 -e ADAMSY_ADMIN_TOKEN=change-me adamsy-free-tv
+curl -s http://127.0.0.1:8080/health
 ```
 
 ## Desktop apps
