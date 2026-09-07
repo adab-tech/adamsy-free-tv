@@ -23,6 +23,8 @@ from backend.channels import (
 from backend.updater import DEFAULT_LIMIT, refresh_channels
 
 API_VERSION = "2.2.0"
+_TRUTHY_ENV = {"1", "true", "yes", "on"}
+_DEPLOY_ENV_VARS = ("FLY_APP_NAME", "FLY_MACHINE_ID", "VERCEL")
 
 
 def _web_dir() -> Path:
@@ -56,6 +58,45 @@ def _default_refresh_state() -> dict[str, object]:
     }
 
 
+def _truthy_env(name: str) -> bool:
+    return os.getenv(name, "").strip().lower() in _TRUTHY_ENV
+
+
+def admin_token_is_required(configured_token: str = "") -> bool:
+    """True when refresh must not run without a configured admin token.
+
+    Local desktop/`--serve-api` stays open if no token is set. Fly, Vercel,
+    Docker (`ADAMSY_REQUIRE_ADMIN_TOKEN=1`), or an explicit token all require
+    one so public deploys cannot rebuild the catalog anonymously.
+    """
+    if configured_token.strip():
+        return True
+    if _truthy_env("ADAMSY_REQUIRE_ADMIN_TOKEN"):
+        return True
+    return any(os.getenv(name, "").strip() for name in _DEPLOY_ENV_VARS)
+
+
+def _admin_tokens_match(provided: str, configured: str) -> bool:
+    if not provided or not configured or len(provided) != len(configured):
+        return False
+    return hmac.compare_digest(provided, configured)
+
+
+def cors_allow_origins() -> list[str]:
+    """Browser origins allowed to call the public JSON API.
+
+    Default is `*` because the catalog is public, cookies are not used
+    (`allow_credentials=False`), and the web UI / desktop webview / third-party
+    IPTV clients all need to reach the API from varying hosts. Set
+    `ADAMSY_CORS_ORIGINS` to a comma-separated list to tighten a deploy.
+    """
+    raw = os.getenv("ADAMSY_CORS_ORIGINS", "*").strip()
+    if not raw or raw == "*":
+        return ["*"]
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    return origins or ["*"]
+
+
 def create_app(channels_file: Path | None = None) -> FastAPI:
     app = FastAPI(
         title="Adamsy Free TV API",
@@ -66,9 +107,10 @@ def create_app(channels_file: Path | None = None) -> FastAPI:
     app.state.refresh_state = _default_refresh_state()
     app.state.refresh_lock = threading.Lock()
     app.state.admin_token = os.getenv("ADAMSY_ADMIN_TOKEN", "").strip()
+    app.state.admin_token_required = admin_token_is_required(app.state.admin_token)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=cors_allow_origins(),
         allow_credentials=False,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
@@ -100,7 +142,14 @@ def create_app(channels_file: Path | None = None) -> FastAPI:
     def _require_admin(x_admin_token: str | None) -> None:
         configured = app.state.admin_token
         provided = x_admin_token or ""
-        if configured and not hmac.compare_digest(provided, configured):
+        if not app.state.admin_token_required:
+            return
+        if not configured:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Admin refresh is disabled until ADAMSY_ADMIN_TOKEN is set.",
+            )
+        if not _admin_tokens_match(provided, configured):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="A valid admin token is required to refresh channels.",
@@ -126,7 +175,7 @@ def create_app(channels_file: Path | None = None) -> FastAPI:
             "status": "ok",
             "service": "adamsy-free-tv-api",
             "version": API_VERSION,
-            "admin_token_required": bool(app.state.admin_token),
+            "admin_token_required": app.state.admin_token_required,
             "refresh_status": _read_refresh_state()["status"],
         }
 
@@ -181,7 +230,7 @@ def create_app(channels_file: Path | None = None) -> FastAPI:
     @app.get("/admin/refresh")
     def refresh_status_view() -> dict[str, object]:
         refresh_state = _read_refresh_state()
-        refresh_state["admin_token_required"] = bool(app.state.admin_token)
+        refresh_state["admin_token_required"] = app.state.admin_token_required
         return refresh_state
 
     @app.post("/admin/refresh", status_code=status.HTTP_202_ACCEPTED)
